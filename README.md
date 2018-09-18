@@ -45,3 +45,21 @@ RapidJSON:		Result: 1 (Execution Time: 0.000010 seconds)
 {"text":"Maybe Putin likes Trump"}
 
 ```
+
+FIX: 这个bug出在 `calibration` 和 `search` 阶段之间. `calibration`之后没有将 `cdata.count` 清零
+
+```
+diff --git a/demo-repl/query_driver.cpp b/demo-repl/query_driver.cpp
+index 33a6a83..8324092 100644
+--- a/demo-repl/query_driver.cpp
++++ b/demo-repl/query_driver.cpp
+@@ -78,6 +78,7 @@ double bench_sparser_engine(char *data, long length, json_query_t jquery,
+     sparser_query_t *query = sparser_calibrate(
+         data, length, '\n', predicates, _rapidjson_parse_callback, &cdata);
+
++		cdata.count = 0;
+     // XXX Apply the search.
+     sparser_stats_t *stats = sparser_search(data, length, '\n', query,
+                                             _rapidjson_parse_callback, &cdata);
+
+```

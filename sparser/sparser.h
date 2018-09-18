@@ -235,6 +235,7 @@ void search_schedules(ascii_rawfilters_t *predicates, search_data_t *sd,
 
         SPARSER_DBG("\x1b[0;32mprocessing!\x1b[0m\n");
 
+        // NOTE(yan): 模拟每一个filter带来的开销
         int first_index = result[0];
         bitmap_t *joint = &sd->joint;
         bitmap_copy(joint, &sd->passthrough_masks[first_index]);
@@ -254,6 +255,7 @@ void search_schedules(ascii_rawfilters_t *predicates, search_data_t *sd,
             bitmap_and(joint, joint, &sd->passthrough_masks[index]);
         }
 
+        // NOTE(yan): 模拟full parser带来的开销
         // Account for full parser.
         uint64_t joint_rate = bitmap_count(joint);
         double filter_cost = sd->full_parse_cost;
@@ -367,7 +369,8 @@ sparser_query_t *sparser_calibrate(BYTE *sample, long length, BYTE delimiter,
         remaining_length -= (sample - line);
 
         bench_timer_t grep_timer = time_start();
-		// NOTE(yan): 使用各种substring去尝试匹配每行原始字符串，记录匹配到哪些记录
+        // NOTE(yan):
+        // 使用各种substring去尝试匹配每行原始字符串，记录匹配到哪些记录
         for (int i = 0; i < num_substrings; i++) {
             const char *predicate = predicates->strings[i];
             SPARSER_DBG("grepping for %s...", predicate);
@@ -384,10 +387,11 @@ sparser_query_t *sparser_calibrate(BYTE *sample, long length, BYTE delimiter,
         timing.grepping_total += grep_time;
 
         // To estimate the full parser's cost.
-		// NOTE(yan): 前面一部分的records进行完全解析
+        // NOTE(yan): 前面一部分的records进行完全解析
         if (records < PARSER_MEASUREMENT_SAMPLES) {
             unsigned long start = rdtsc();
-			// NOTE(yan): callback是完全解析. 如果substring匹配的话，尝试去完全解析
+            // NOTE(yan): callback是完全解析.
+            // 如果substring匹配的话，尝试去完全解析
             passed += callback(line, callback_arg);
             unsigned long end = rdtsc();
             parse_cost += (end - start);
@@ -396,7 +400,7 @@ sparser_query_t *sparser_calibrate(BYTE *sample, long length, BYTE delimiter,
 
         records++;
 
-        timing.cycles_per_parse_avg = parse_cost; // NOTE(yan): 总体parse时间
+        timing.cycles_per_parse_avg = parse_cost;  // NOTE(yan): 总体parse时间
     }
 
     timing.sampling_total = time_stop(start);
@@ -419,6 +423,7 @@ sparser_query_t *sparser_calibrate(BYTE *sample, long length, BYTE delimiter,
     int result[MAX_SCHEDULE_SIZE];
 
     // Get the best schedule.
+    // NOTE(yan): 枚举length = i的最佳开销
     for (int i = 1; i <= MAX_SCHEDULE_SIZE; i++) {
         search_schedules(predicates, &sd, i, 0, result, i);
     }
@@ -437,6 +442,7 @@ sparser_query_t *sparser_calibrate(BYTE *sample, long length, BYTE delimiter,
     }
     SPARSER_DBG("Best schedule: %s\n", printer);
 
+    // NOTE(yan): 为sparser_query_t 添加 best_scheduler信息
     sparser_query_t *squery = sparser_new_query();
     memset(squery, 0, sizeof(sparser_query_t));
     for (int i = 0; i < sd.schedule_len; i++) {
@@ -519,7 +525,7 @@ sparser_stats_t *sparser_search(char *input, long length, BYTE delimiter,
         // If all raw filters matched...
         if (count == query->count) {
             stats.sparser_passed++;
-
+			// printf("sparser callback on %s", current_record_start);
             if (callback(current_record_start, callback_ctx)) {
                 stats.callback_passed++;
             }
