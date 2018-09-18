@@ -367,6 +367,7 @@ sparser_query_t *sparser_calibrate(BYTE *sample, long length, BYTE delimiter,
         remaining_length -= (sample - line);
 
         bench_timer_t grep_timer = time_start();
+		// NOTE(yan): 使用各种substring去尝试匹配每行原始字符串，记录匹配到哪些记录
         for (int i = 0; i < num_substrings; i++) {
             const char *predicate = predicates->strings[i];
             SPARSER_DBG("grepping for %s...", predicate);
@@ -383,8 +384,10 @@ sparser_query_t *sparser_calibrate(BYTE *sample, long length, BYTE delimiter,
         timing.grepping_total += grep_time;
 
         // To estimate the full parser's cost.
+		// NOTE(yan): 前面一部分的records进行完全解析
         if (records < PARSER_MEASUREMENT_SAMPLES) {
             unsigned long start = rdtsc();
+			// NOTE(yan): callback是完全解析. 如果substring匹配的话，尝试去完全解析
             passed += callback(line, callback_arg);
             unsigned long end = rdtsc();
             parse_cost += (end - start);
@@ -393,7 +396,7 @@ sparser_query_t *sparser_calibrate(BYTE *sample, long length, BYTE delimiter,
 
         records++;
 
-        timing.cycles_per_parse_avg = parse_cost;
+        timing.cycles_per_parse_avg = parse_cost; // NOTE(yan): 总体parse时间
     }
 
     timing.sampling_total = time_stop(start);
