@@ -31,6 +31,7 @@ typedef struct ascii_rawfilters {
 } ascii_rawfilters_t;
 
 // Decomposes each string into substrings of length REGSZ or less as search tokens.
+// NOTE(yan): trump -> trump, trum, rump
 ascii_rawfilters_t decompose(const char **predicates, int num_predicates) {
 
 	int num_ascii_rawfilters = 0;

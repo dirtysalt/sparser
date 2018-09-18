@@ -130,6 +130,7 @@ void process_query(char *raw, long length, int query_index) {
         demo_query_strings[query_index]);
 
     int count = 0;
+    // NOTE(yan): 根据jquery生成不同的predications.
     json_query_t jquery = demo_queries[query_index]();
     const char **preds = sdemo_queries[query_index](&count);
 
